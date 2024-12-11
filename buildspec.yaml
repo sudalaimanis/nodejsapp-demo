@@ -1,0 +1,36 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      docker: latest
+    commands:
+      - echo "Installing dependencies..."
+      - apk add --no-cache git  # Ensure git is installed for cloning the repository
+
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 471112778160.dkr.ecr.ap-south-1.amazonaws.com
+      - echo "Cloning the repository..."
+      - git clone https://github.com/sudalaimanis/nodejsapp-demo.git .
+      - echo "Pulling any existing image (if exists)..."
+      - docker pull 471112778160.dkr.ecr.ap-south-1.amazonaws.com/nodeapp:latest || true
+
+  build:
+    commands:
+      - echo "Building the Docker image..."
+      - docker build -t nodeapp .
+      - echo "Tagging the Docker image..."
+      - docker tag nodeapp:latest 471112778160.dkr.ecr.ap-south-1.amazonaws.com/nodeapp:latest
+
+  post_build:
+    commands:
+      - echo "Pushing the Docker image to Amazon ECR..."
+      - docker push 471112778160.dkr.ecr.ap-south-1.amazonaws.com/nodeapp:latest
+      - echo "Build and Push completed."
+
+artifacts:
+  files:
+    - '**/*'
+  discard-paths: yes
